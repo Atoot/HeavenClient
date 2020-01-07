@@ -1,39 +1,39 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "Stage.h"
 
 #include "../Audio/Audio.h"
 #include "../Character/SkillId.h"
 #include "../IO/Messages.h"
+#include "../IO/UI.h"
 #include "../Util/Misc.h"
 
-#include "../Net/Packets/GameplayPackets.h"
+#include "../IO/UITypes/UIStatusbar.h"
 #include "../Net/Packets/AttackAndSkillPackets.h"
+#include "../Net/Packets/GameplayPackets.h"
 
-#include "nlnx/nx.hpp"
+#include <nlnx/nx.hpp>
 
-#include <iostream>
-
-namespace jrc
+namespace ms
 {
-	Stage::Stage() : combat(player, chars, mobs)
+	Stage::Stage() : combat(player, chars, mobs, reactors)
 	{
-		state = INACTIVE;
+		state = State::INACTIVE;
 	}
 
 	void Stage::init()
@@ -45,16 +45,16 @@ namespace jrc
 	{
 		switch (state)
 		{
-		case INACTIVE:
+		case State::INACTIVE:
 			load_map(mapid);
 			respawn(portalid);
 			break;
-		case TRANSITION:
+		case State::TRANSITION:
 			respawn(portalid);
 			break;
 		}
 
-		state = ACTIVE;
+		state = State::ACTIVE;
 	}
 
 	void Stage::loadplayer(const CharEntry& entry)
@@ -65,17 +65,20 @@ namespace jrc
 
 	void Stage::clear()
 	{
-		state = INACTIVE;
+		state = State::INACTIVE;
 
 		chars.clear();
 		npcs.clear();
 		mobs.clear();
 		drops.clear();
 		reactors.clear();
+
+		PlayerMapTransferPacket().dispatch();
 	}
 
 	void Stage::load_map(int32_t mapid)
 	{
+		Stage::mapid = mapid;
 		std::string strid = string_format::extend_id(mapid, 9);
 		std::string prefix = std::to_string(mapid / 100000000);
 		nl::node src = nl::nx::map["Map"]["Map" + prefix][strid + ".img"];
@@ -100,7 +103,7 @@ namespace jrc
 
 	void Stage::draw(float alpha) const
 	{
-		if (state != ACTIVE)
+		if (state != State::ACTIVE)
 			return;
 
 		Point<int16_t> viewpos = camera.position(alpha);
@@ -124,15 +127,17 @@ namespace jrc
 		combat.draw(viewx, viewy, alpha);
 		portals.draw(viewpos, alpha);
 		backgrounds.drawforegrounds(viewx, viewy, alpha);
+		effect.draw();
 	}
 
 	void Stage::update()
 	{
-		if (state != ACTIVE)
+		if (state != State::ACTIVE)
 			return;
 
 		combat.update();
 		backgrounds.update();
+		effect.update();
 		tilesobjs.update();
 
 		reactors.update(physics);
@@ -153,7 +158,7 @@ namespace jrc
 			if (MobAttack attack = mobs.create_attack(oid_id))
 			{
 				MobAttackResult result = player.damage(attack);
-				TakeDamagePacket(result, TakeDamagePacket::TOUCH).dispatch();
+				TakeDamagePacket(result, TakeDamagePacket::From::TOUCH).dispatch();
 			}
 		}
 	}
@@ -181,12 +186,13 @@ namespace jrc
 		}
 		else if (warpinfo.valid)
 		{
-			PlayerMapTransferPacket().dispatch();
-			ChangeMapPacket(false, warpinfo.mapid, warpinfo.name, false).dispatch();
+			ChangeMapPacket(false, -1, warpinfo.name, false).dispatch();
 
 			CharStats& stats = Stage::get().get_player().get_stats();
 
 			stats.set_mapid(warpinfo.mapid);
+
+			Sound(Sound::Name::PORTAL).play();
 		}
 	}
 
@@ -219,30 +225,30 @@ namespace jrc
 
 	void Stage::send_key(KeyType::Id type, int32_t action, bool down)
 	{
-		if (state != ACTIVE || !playable)
+		if (state != State::ACTIVE || !playable)
 			return;
 
 		switch (type)
 		{
-		case KeyType::ACTION:
+		case KeyType::Id::ACTION:
 			if (down)
 			{
 				switch (action)
 				{
-				case KeyAction::UP:
+				case KeyAction::Id::UP:
 					check_ladders(true);
 					check_portals();
 					break;
-				case KeyAction::DOWN:
+				case KeyAction::Id::DOWN:
 					check_ladders(false);
 					break;
-				case KeyAction::SIT:
+				case KeyAction::Id::SIT:
 					check_seats();
 					break;
-				case KeyAction::ATTACK:
+				case KeyAction::Id::ATTACK:
 					combat.use_move(0);
 					break;
-				case KeyAction::PICKUP:
+				case KeyAction::Id::PICKUP:
 					check_drops();
 					break;
 				}
@@ -250,13 +256,13 @@ namespace jrc
 
 			playable->send_action(KeyAction::actionbyid(action), down);
 			break;
-		case KeyType::SKILL:
+		case KeyType::Id::SKILL:
 			combat.use_move(action);
 			break;
-		case KeyType::ITEM:
+		case KeyType::Id::ITEM:
 			player.use_item(action);
 			break;
-		case KeyType::FACE:
+		case KeyType::Id::FACE:
 			player.set_expression(action);
 			break;
 		}
@@ -264,6 +270,20 @@ namespace jrc
 
 	Cursor::State Stage::send_cursor(bool pressed, Point<int16_t> position)
 	{
+		auto statusbar = UI::get().get_element<UIStatusbar>();
+
+		if (statusbar && statusbar->is_menu_active())
+		{
+			if (pressed)
+			{
+				statusbar->remove_menus();
+
+				return npcs.send_cursor(pressed, position, camera.position());
+			}
+
+			return statusbar->send_cursor(pressed, position);
+		}
+
 		return npcs.send_cursor(pressed, position, camera.position());
 	}
 
@@ -313,5 +333,15 @@ namespace jrc
 			return player;
 		else
 			return chars.get_char(cid);
+	}
+
+	int Stage::get_mapid()
+	{
+		return mapid;
+	}
+
+	void Stage::add_effect(std::string path)
+	{
+		effect = MapEffect(path);
 	}
 }

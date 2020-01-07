@@ -1,40 +1,35 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "../UIElement.h"
 
 #include "../Components/Charset.h"
 #include "../Components/Gauge.h"
-#include "../Components/Textfield.h"
+#include "../Character/CharStats.h"
+#include "../Graphics/SpecialText.h"
 
-#include "../../Character/CharStats.h"
-#include "../../Character/Inventory/Inventory.h"
-#include "../../Character/Job.h"
-#include "../../Graphics/Animation.h"
-#include "../../Graphics/Text.h"
-#include "../../Graphics/OutlinedText.h"
-
-namespace jrc
+namespace ms
 {
 	class UIStatusbar : public UIElement
 	{
 	public:
-		static constexpr Type TYPE = STATUSBAR;
+		static constexpr Type TYPE = UIElement::Type::STATUSBAR;
 		static constexpr bool FOCUSED = false;
 		static constexpr bool TOGGLED = true;
 
@@ -51,19 +46,23 @@ namespace jrc
 
 		void draw(float alpha) const override;
 		void update() override;
-		bool remove_cursor(bool clicked, Point<int16_t> cursorpos) override;
 
-		void send_key(int32_t keycode, bool pressed) override;
+		void send_key(int32_t keycode, bool pressed, bool escape) override;
 		bool is_in_range(Point<int16_t> cursorpos) const override;
+
+		UIElement::Type get_type() const override;
 
 		void toggle_qs();
 		void toggle_menu();
+		void remove_menus();
 		bool is_menu_active();
 
 	protected:
 		Button::State button_pressed(uint16_t buttonid) override;
 
 	private:
+		static constexpr int16_t QUICKSLOT_MAX = 211;
+
 		float getexppercent() const;
 		float gethppercent() const;
 		float getmppercent() const;
@@ -73,9 +72,9 @@ namespace jrc
 		void toggle_community();
 		void toggle_character();
 		void toggle_event();
-		void remove_menus();
 		void remove_active_menu(MenuType type);
-		void transition() const;
+
+		Point<int16_t> get_quickslot_pos();
 
 		enum Buttons : uint16_t
 		{
@@ -104,7 +103,7 @@ namespace jrc
 			BT_SETTING_JOYPAD,
 			BT_SETTING_QUIT,
 			BT_COMMUNITY_FRIENDS,
-			BT_COMMUNITY_BOSS,
+			BT_COMMUNITY_PARTY,
 			BT_COMMUNITY_GUILD,
 			BT_COMMUNITY_MAPLECHAT,
 			BT_CHARACTER_INFO,
@@ -138,16 +137,20 @@ namespace jrc
 		Point<int16_t> levelset_pos;
 		Point<int16_t> namelabel_pos;
 		Point<int16_t> quickslot_pos;
+		Point<int16_t> quickslot_adj;
+		Point<int16_t> quickslot_qs_adj;
 		Point<int16_t> menu_pos;
 		Point<int16_t> setting_pos;
 		Point<int16_t> community_pos;
 		Point<int16_t> character_pos;
 		Point<int16_t> event_pos;
+		int16_t quickslot_min;
 		int16_t position_x;
 		int16_t position_y;
 
 		bool quickslot_active;
 		int16_t VWIDTH;
+		int16_t VHEIGHT;
 
 		bool menu_active;
 		bool setting_active;

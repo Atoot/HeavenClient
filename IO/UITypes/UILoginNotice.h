@@ -1,124 +1,154 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "../UIElement.h"
 
-#include "../../Graphics/Sprite.h"
-#include "../../Graphics/Texture.h"
-
-namespace jrc
+namespace ms
 {
 	class UIKeyConfirm : public UIElement
 	{
 	public:
-		static constexpr Type TYPE = LOGINNOTICE_CONFIRM;
+		static constexpr Type TYPE = UIElement::Type::LOGINNOTICE_CONFIRM;
 		static constexpr bool FOCUSED = true;
 		static constexpr bool TOGGLED = false;
 
-		UIKeyConfirm(uint8_t type);
+		UIKeyConfirm(bool alternate, std::function<void()> oh, bool login);
 
-		void draw(float alpha) const override;
+		void send_key(int32_t keycode, bool pressed, bool escape) override;
 
-		void confirm_action();
+		UIElement::Type get_type() const override;
 
 	protected:
-		Button::State button_pressed(uint16_t id) override;
-		void send_key(int32_t keycode, bool pressed) override;
+		Button::State button_pressed(uint16_t buttonid) override;
 
 	private:
+		void confirm();
+
 		enum Buttons
 		{
-			BT_OK
+			OK
 		};
 
-		Texture background;
+		std::function<void()> okhandler;
+		bool login;
 	};
 
 	class UIKeySelect : public UIElement
 	{
 	public:
-		static constexpr Type TYPE = LOGINNOTICE;
+		static constexpr Type TYPE = UIElement::Type::LOGINNOTICE;
 		static constexpr bool FOCUSED = true;
 		static constexpr bool TOGGLED = false;
 
-		UIKeySelect();
+		UIKeySelect(std::function<void(bool)> okhandler, bool login);
 
-		void draw(float alpha) const override;
+		void send_key(int32_t keycode, bool pressed, bool escape) override;
+
+		UIElement::Type get_type() const override;
 
 	protected:
-		Button::State button_pressed(uint16_t id) override;
+		Button::State button_pressed(uint16_t buttonid) override;
 
 	private:
 		enum Buttons
 		{
-			BT_KEY_TYPE_A,
-			BT_KEY_TYPE_B
+			CLOSE,
+			TYPEA,
+			TYPEB
 		};
 
-		Texture background;
+		std::function<void(bool)> okhandler;
+		bool login;
 	};
 
 	class UIClassConfirm : public UIElement
 	{
 	public:
-		static constexpr Type TYPE = LOGINNOTICE;
-		static constexpr bool FOCUSED = true;
+		static constexpr Type TYPE = UIElement::Type::LOGINNOTICE;
+		static constexpr bool FOCUSED = false;
 		static constexpr bool TOGGLED = false;
 
-		UIClassConfirm(bool unavailable, uint16_t race, int8_t classMap);
+		UIClassConfirm(uint8_t selected_class, bool unavailable, std::function<void()> okhandler);
 
-		void draw(float alpha) const override;
+		Cursor::State send_cursor(bool clicked, Point<int16_t> cursorpos) override;
+		void send_key(int32_t keycode, bool pressed, bool escape) override;
 
-		Cursor::State send_cursor(bool down, Point<int16_t> pos) override;
-
-		void create_class();
+		UIElement::Type get_type() const override;
 
 	protected:
-		Button::State button_pressed(uint16_t id) override;
-		void send_key(int32_t keycode, bool pressed) override;
+		Button::State button_pressed(uint16_t buttonid) override;
 
 	private:
-		enum Buttons
+		enum Buttons : uint16_t
 		{
-			BT_OK,
-			BT_CANCEL
+			OK,
+			CANCEL
 		};
 
-		Texture background;
-		Sprite text;
-		bool unavailable;
-		uint16_t race;
+		enum Classes : uint8_t
+		{
+			RESISTANCE,
+			EXPLORER,
+			CYGNUSKNIGHTS,
+			ARAN,
+			EVAN,
+			MERCEDES,
+			DEMON,
+			PHANTOM,
+			DUALBLADE,
+			MIHILE,
+			LUMINOUS,
+			KAISER,
+			ANGELICBUSTER,
+			CANNONEER,
+			XENON,
+			ZERO,
+			SHADE,
+			JETT,
+			HAYATO,
+			KANNA,
+			CHASE,
+			PINKBEAN,
+			KINESIS,
+			CADENA,
+			ILLIUM,
+			ARK,
+		};
+
+		std::function<void()> okhandler;
 	};
 
 	class UIQuitConfirm : public UIElement
 	{
 	public:
-		static constexpr Type TYPE = LOGINNOTICE;
+		static constexpr Type TYPE = UIElement::Type::LOGINNOTICE;
 		static constexpr bool FOCUSED = true;
 		static constexpr bool TOGGLED = false;
 
 		UIQuitConfirm();
 
-		void draw(float alpha) const override;
+		void send_key(int32_t keycode, bool pressed, bool escape) override;
+
+		UIElement::Type get_type() const override;
 
 	protected:
-		Button::State button_pressed(uint16_t id) override;
-		void send_key(int32_t keycode, bool pressed) override;
+		Button::State button_pressed(uint16_t buttonid) override;
 
 	private:
 		enum Buttons
@@ -126,19 +156,16 @@ namespace jrc
 			BT_OK,
 			BT_CANCEL
 		};
-
-		Texture background;
-		Sprite text;
 	};
 
 	class UILoginNotice : public UIElement
 	{
 	public:
-		static constexpr Type TYPE = LOGINNOTICE;
+		static constexpr Type TYPE = UIElement::Type::LOGINNOTICE;
 		static constexpr bool FOCUSED = true;
 		static constexpr bool TOGGLED = false;
 
-		enum Message : int16_t
+		enum Message : uint16_t
 		{
 			VULGAR_NAME,
 			DELETE_CHAR_ENTER_BIRTHDAY,
@@ -264,22 +291,27 @@ namespace jrc
 			JAPANESE2
 		};
 
-		UILoginNotice(int8_t message);
+		UILoginNotice(uint16_t message, std::function<void()> okhandler, std::function<void()> cancelhandler);
+		UILoginNotice(uint16_t message, std::function<void()> okhandler);
+		UILoginNotice(uint16_t message);
 
-		void draw(float alpha) const override;
+		void send_key(int32_t keycode, bool pressed, bool escape) override;
+
+		UIElement::Type get_type() const override;
 
 	protected:
-		Button::State button_pressed(uint16_t id) override;
-		void send_key(int32_t keycode, bool pressed) override;
+		Button::State button_pressed(uint16_t buttonid) override;
 
 	private:
-		enum Buttons
+		enum Buttons : uint16_t
 		{
-			BT_OK
+			YES,
+			NO
 		};
 
-		Texture background;
-		Sprite text;
 		bool saveid;
+		bool multiple;
+		std::function<void()> okhandler;
+		std::function<void()> cancelhandler;
 	};
 }

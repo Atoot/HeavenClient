@@ -1,37 +1,38 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "Attack.h"
 #include "RegularAttack.h"
 #include "Skill.h"
 
 #include "../Maplemap/MapChars.h"
 #include "../Maplemap/MapMobs.h"
+#include "../Maplemap/MapReactors.h"
+#include "../Character/Player.h"
+#include "../Template/TimedQueue.h"
 
-#include "../../Character/Player.h"
-#include "../../Template/TimedQueue.h"
-
-namespace jrc
+namespace ms
 {
 	class Combat
 	{
 	public:
-		Combat(Player& player, MapChars& chars, MapMobs& mobs);
+		Combat(Player& player, MapChars& chars, MapMobs& mobs, MapReactors& reactors);
 
 		// Draw bullets, damage numbers etc.
 		void draw(double viewx, double viewy, float alpha) const;
@@ -68,6 +69,7 @@ namespace jrc
 
 		void apply_attack(const AttackResult& attack);
 		void apply_move(const SpecialMove& move);
+		std::vector<int32_t> find_closest(MapObjects *objs, Rectangle<int16_t> range, Point<int16_t> origin, uint8_t objcount, bool use_mobs) const;
 		void apply_use_movement(const SpecialMove& move);
 		void apply_result_movement(const SpecialMove& move, const AttackResult& result);
 		void apply_rush(const AttackResult& result);
@@ -80,6 +82,7 @@ namespace jrc
 		Player& player;
 		MapChars& chars;
 		MapMobs& mobs;
+		MapReactors& reactors;
 
 		std::unordered_map<int32_t, Skill> skills;
 		RegularAttack regularattack;

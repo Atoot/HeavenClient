@@ -1,33 +1,34 @@
-/////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "BodyDrawinfo.h"
 #include "Body.h"
 #include "Hair.h"
 #include "Face.h"
 #include "CharEquips.h"
 
-#include "../../Net/Login.h"
-#include "../../Template/Interpolated.h"
-#include "../../Util/Randomizer.h"
-#include "../../Util/TimedBool.h"
+#include "../Net/Login.h"
+#include "../Template/Interpolated.h"
+#include "../Util/Randomizer.h"
+#include "../Util/TimedBool.h"
 
-namespace jrc
+namespace ms
 {
 	class CharLook
 	{
@@ -37,8 +38,7 @@ namespace jrc
 
 		void reset();
 		void draw(const DrawArgument& args, float alpha) const;
-		void draw(Point<int16_t> pos, bool flip,
-			Stance::Id stance, Expression::Id expression) const;
+		void draw(Point<int16_t> pos, bool flip, Stance::Id stance, Expression::Id expression) const;
 		bool update(uint16_t timestep);
 
 		void set_hair(int32_t hairid);
@@ -54,6 +54,7 @@ namespace jrc
 		void set_action(const std::string& action);
 		void set_direction(bool mirrored);
 		void set_alerted(int64_t millis);
+		bool get_alerted() const;
 
 		bool is_twohanded(Stance::Id stance) const;
 		uint16_t get_attackdelay(size_t no, uint8_t first_frame) const;
@@ -70,8 +71,7 @@ namespace jrc
 
 	private:
 		void updatetwohanded();
-		void draw(const DrawArgument& args, Stance::Id interstance, 
-			Expression::Id interexp, uint8_t interframe, uint8_t interfcframe) const;
+		void draw(const DrawArgument& args, Stance::Id interstance, Expression::Id interexp, uint8_t interframe, uint8_t interfcframe) const;
 		uint16_t get_delay(Stance::Id stance, uint8_t frame) const;
 		uint8_t getnextframe(Stance::Id stance, uint8_t frame) const;
 		Stance::Id getattackstance(uint8_t attack, bool degenerate) const;
@@ -98,11 +98,9 @@ namespace jrc
 		Randomizer randomizer;
 		TimedBool alerted;
 
-
 		static BodyDrawinfo drawinfo;
 		static std::unordered_map<int32_t, Hair> hairstyles;
 		static std::unordered_map<int32_t, Face> facetypes;
 		static std::unordered_map<int32_t, Body> bodytypes;
 	};
 }
-

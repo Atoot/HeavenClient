@@ -1,30 +1,35 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "Window.h"
-
 #include "UI.h"
 
 #include "../Console.h"
 #include "../Constants.h"
 #include "../Configuration.h"
+#include "../Timer.h"
+
 #include "../Graphics/GraphicsGL.h"
 
-namespace jrc
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#include <Windows.h>
+
+namespace ms
 {
 	Window::Window()
 	{
@@ -51,6 +56,8 @@ namespace jrc
 		UI::get().send_key(key, action != GLFW_RELEASE);
 	}
 
+	std::chrono::time_point<std::chrono::steady_clock> start = ContinuousTimer::get().start();
+
 	void mousekey_callback(GLFWwindow*, int button, int action, int)
 	{
 		switch (button)
@@ -62,9 +69,18 @@ namespace jrc
 				UI::get().send_cursor(true);
 				break;
 			case GLFW_RELEASE:
+			{
+				auto diff_ms = ContinuousTimer::get().stop(start) / 1000;
+				start = ContinuousTimer::get().start();
+
+				if (diff_ms > 10 && diff_ms < 200)
+					UI::get().doubleclick();
+
 				UI::get().send_cursor(false);
-				break;
 			}
+			break;
+			}
+
 			break;
 		case GLFW_MOUSE_BUTTON_RIGHT:
 			switch (action)
@@ -73,6 +89,7 @@ namespace jrc
 				UI::get().rightclick();
 				break;
 			}
+
 			break;
 		}
 	}
@@ -90,12 +107,24 @@ namespace jrc
 		UI::get().send_focus(focused);
 	}
 
+	void scroll_callback(GLFWwindow*, double xoffset, double yoffset)
+	{
+		UI::get().send_scroll(yoffset);
+	}
+
+	void close_callback(GLFWwindow* window)
+	{
+		UI::get().send_close();
+
+		glfwSetWindowShouldClose(window, GL_FALSE);
+	}
+
 	Error Window::init()
 	{
 		fullscreen = Setting<Fullscreen>::get().load();
 
 		if (!glfwInit())
-			return Error::GLFW;
+			return Error::Code::GLFW;
 
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		context = glfwCreateWindow(1, 1, "", nullptr, nullptr);
@@ -124,7 +153,7 @@ namespace jrc
 		);
 
 		if (!glwnd)
-			return Error::WINDOW;
+			return Error::Code::WINDOW;
 
 		glfwMakeContextCurrent(glwnd);
 
@@ -136,15 +165,39 @@ namespace jrc
 		glLoadIdentity();
 
 		glfwSetInputMode(glwnd, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-		glfwSetInputMode(glwnd, GLFW_STICKY_KEYS, 1);
+
+		double xpos, ypos;
+
+		glfwGetCursorPos(glwnd, &xpos, &ypos);
+		cursor_callback(glwnd, xpos, ypos);
+
+		glfwSetInputMode(glwnd, GLFW_STICKY_KEYS, GL_TRUE);
 		glfwSetKeyCallback(glwnd, key_callback);
 		glfwSetMouseButtonCallback(glwnd, mousekey_callback);
 		glfwSetCursorPosCallback(glwnd, cursor_callback);
 		glfwSetWindowFocusCallback(glwnd, focus_callback);
+		glfwSetScrollCallback(glwnd, scroll_callback);
+		glfwSetWindowCloseCallback(glwnd, close_callback);
+
+		char buf[256];
+		GetCurrentDirectoryA(256, buf);
+		strcat(buf, "\\Icon.png");
+
+		GLFWimage images[1];
+
+		auto stbi = stbi_load(buf, &images[0].width, &images[0].height, 0, 4);
+
+		if (stbi == NULL)
+			return Error(Error::Code::MISSING_ICON, stbi_failure_reason());
+
+		images[0].pixels = stbi;
+
+		glfwSetWindowIcon(glwnd, 1, images);
+		stbi_image_free(images[0].pixels);
 
 		GraphicsGL::get().reinit();
 
-		return Error::NONE;
+		return Error::Code::NONE;
 	}
 
 	bool Window::not_closed() const
@@ -180,21 +233,17 @@ namespace jrc
 
 	void Window::check_events()
 	{
-		int32_t tabstate = glfwGetKey(glwnd, GLFW_KEY_F11);
-		int32_t new_width = Constants::Constants::get().get_viewwidth();
-		int32_t new_height = Constants::Constants::get().get_viewheight();
+		int16_t max_width = Configuration::get().get_max_width();
+		int16_t max_height = Configuration::get().get_max_height();
+		int16_t new_width = Constants::Constants::get().get_viewwidth();
+		int16_t new_height = Constants::Constants::get().get_viewheight();
 
-		if (tabstate == GLFW_PRESS)
-		{
-			fullscreen = !fullscreen;
-			initwindow();
-		}
-		else if (width != new_width || height != new_height)
+		if (width != new_width || height != new_height)
 		{
 			width = new_width;
 			height = new_height;
 
-			if (width == 1920)
+			if (new_width >= max_width || new_height >= max_height)
 				fullscreen = true;
 
 			initwindow();
@@ -230,5 +279,20 @@ namespace jrc
 		const char* text = glfwGetClipboardString(glwnd);
 
 		return text ? text : "";
+	}
+
+	void Window::toggle_fullscreen()
+	{
+		int16_t max_width = Configuration::get().get_max_width();
+		int16_t max_height = Configuration::get().get_max_height();
+
+		if (width < max_width && height < max_height)
+		{
+			fullscreen = !fullscreen;
+			Setting<Fullscreen>::get().save(fullscreen);
+
+			initwindow();
+			glfwPollEvents();
+		}
 	}
 }

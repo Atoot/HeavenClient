@@ -1,21 +1,22 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "Template/Point.h"
 #include "Template/Singleton.h"
 #include "Template/TypeMap.h"
@@ -26,7 +27,7 @@
 #include <type_traits>
 #include <functional>
 
-namespace jrc
+namespace ms
 {
 	// Manages the 'Settings' file which contains configurations set by user behaviour.
 	class Configuration : public Singleton<Configuration>
@@ -43,25 +44,80 @@ namespace jrc
 		void save() const;
 		// Get private member SHOW_FPS
 		bool get_show_fps() const;
+		// Get private member SHOW_PACKETS
+		bool get_show_packets() const;
+		// Get private member AUTO_LOGIN
+		bool get_auto_login() const;
+		// Get the world to login with
+		uint8_t get_auto_world();
+		// Get the channel to login with
+		uint8_t get_auto_channel();
+		// Get the account to login with
+		std::string get_auto_acc();
+		// Get the password to login with
+		std::string get_auto_pass();
+		// Get the pic to login with
+		std::string get_auto_pic();
+		// Get the character id to login with
+		int32_t get_auto_cid();
 		// Get private member TITLE
 		std::string get_title() const;
-		// Set the MACS
+		// Get private member VERSION
+		std::string get_version() const;
+		// Get private member JOINLINK
+		std::string get_joinlink() const;
+		// Get private member WEBSITE
+		std::string get_website() const;
+		// Get private member FINDID
+		std::string get_findid() const;
+		// Get private member FINDPASS
+		std::string get_findpass() const;
+		// Get private member RESETPIC
+		std::string get_resetpic() const;
+		// Set private member MACS
 		void set_macs(char* macs);
-		// Set the HWID
+		// Set private member HWID
 		void set_hwid(char* hwid, char* volumeSerialNumber);
-		// Get the MACS
+		// Set private member MAXWIDTH
+		void set_max_width(int16_t max_width);
+		// Set private member MAXHEIGHT
+		void set_max_height(int16_t max_height);
+		// Get private member MACS
 		std::string get_macs();
-		// Get the HWID
+		// Get private member HWID
 		std::string get_hwid();
 		// Get the Hard Drive Volume Serial Number
 		std::string get_vol_serial_num();
+		// Get the max width allowed
+		int16_t get_max_width();
+		// Get the max height allowed
+		int16_t get_max_height();
+		// Get the shop's "Right-click to sell item" boolean
+		bool get_rightclicksell();
+		// Set the shop's "Right-click to sell item" boolean
+		void set_rightclicksell(bool value);
+		// Whether to show the weekly maple star in Maple Chat
+		bool get_show_weekly();
+		// Set whether to show the weekly maple star in Maple Chat
+		void set_show_weekly(bool value);
+		// Whether to show the start screen
+		bool get_start_shown();
+		// Set whether to show the start screen
+		void set_start_shown(bool value);
+		// Get the character's selected world
+		uint8_t get_worldid();
+		// Set the character's selected world
+		void set_worldid(uint8_t id);
+		// Get the character's selected channel
+		uint8_t get_channelid();
+		// Set the character's selected channel
+		void set_channelid(uint8_t id);
 
 		// Base class for an entry in the settings file.
 		class Entry
 		{
 		protected:
-			Entry(const char* n, const char* v)
-				: name(n), value(v) {}
+			Entry(const char* n, const char* v) : name(n), value(v) {}
 
 			std::string name;
 			std::string value;
@@ -161,14 +217,35 @@ namespace jrc
 
 		const char* FILENAME = "Settings";
 		const char* TITLE = "MapleStory";
+		const char* VERSION = "210.1";
+		const char* JOINLINK = "https://www.nexon.com/account/en/create";
+		const char* WEBSITE = "http://maplestory.nexon.net/";
+		const char* FINDID = "https://www.nexon.com/account/en/login";
+		const char* FINDPASS = "https://www.nexon.com/account/en/reset-password";
+		const char* RESETPIC = "https://www.nexon.com/account/en/login";
 		const bool SHOW_FPS = false;
+		const bool SHOW_PACKETS = false;
+		const bool AUTO_LOGIN = false;
+		const uint8_t auto_world = 0;
+		const uint8_t auto_channel = 0;
+		const std::string auto_acc = "";
+		const std::string auto_pass = "";
+		const std::string auto_pic = "";
+		const int32_t auto_cid = 0;
+		bool rightclicksell = false;
+		bool show_weekly = true;
+		bool start_shown = false;
 		std::string MACS;
 		std::string HWID;
+		int16_t MAXWIDTH;
+		int16_t MAXHEIGHT;
 		std::string VolumeSerialNumber;
+		uint8_t worldid;
+		uint8_t channelid;
 		TypeMap<Entry> settings;
 	};
 
-	// IP Adress which the client will connect to.
+	// IP Address which the client will connect to.
 	struct ServerIP : public Configuration::StringEntry
 	{
 		ServerIP() : StringEntry("ServerIP", "127.0.0.1") {}
@@ -180,7 +257,7 @@ namespace jrc
 		ServerPort() : StringEntry("ServerPort", "8484") {}
 	};
 
-	// Wether to start in fullscreen mode.
+	// Whether to start in fullscreen mode.
 	struct Fullscreen : public Configuration::BoolEntry
 	{
 		Fullscreen() : BoolEntry("Fullscreen", "false") {}
@@ -198,7 +275,7 @@ namespace jrc
 		Height() : ShortEntry("Height", "600") {}
 	};
 
-	// Wether to use vsync.
+	// Whether to use VSync.
 	struct VSync : public Configuration::BoolEntry
 	{
 		VSync() : BoolEntry("VSync", "true") {}
@@ -228,7 +305,7 @@ namespace jrc
 		SFXVolume() : ByteEntry("SFXVolume", "50") {}
 	};
 
-	// Wether to save the last used account name.
+	// Whether to save the last used account name.
 	struct SaveLogin : public Configuration::BoolEntry
 	{
 		SaveLogin() : BoolEntry("SaveLogin", "false") {}
@@ -252,70 +329,139 @@ namespace jrc
 		DefaultChannel() : ByteEntry("Channel", "0") {}
 	};
 
+	// The last used region.
+	struct DefaultRegion : public Configuration::ByteEntry
+	{
+		DefaultRegion() : ByteEntry("Region", "5") {}
+	};
+
 	// The last used character.
 	struct DefaultCharacter : public Configuration::ByteEntry
 	{
 		DefaultCharacter() : ByteEntry("Character", "0") {}
 	};
 
+	// Whether to show the chatbar.
+	struct Chatopen : public Configuration::BoolEntry
+	{
+		Chatopen() : BoolEntry("Chatopen", "false") {}
+	};
+
 	// The default position of the character stats inventory.
 	struct PosSTATS : public Configuration::PointEntry
 	{
-		PosSTATS() : PointEntry("PosSTATS", "(100,150)") {}
+		PosSTATS() : PointEntry("PosSTATS", "(72,72)") {}
 	};
 
-	// The default position of the equip inventory.
+	// The default position of the equipment inventory.
 	struct PosEQINV : public Configuration::PointEntry
 	{
-		PosEQINV() : PointEntry("PosEQINV", "(250,150)") {}
+		PosEQINV() : PointEntry("PosEQINV", "(250,160)") {}
 	};
 
 	// The default position of the item inventory.
 	struct PosINV : public Configuration::PointEntry
 	{
-		PosINV() : PointEntry("PosINV", "(300,150)") {}
+		PosINV() : PointEntry("PosINV", "(300,160)") {}
 	};
 
 	// The default position of the skill inventory.
 	struct PosSKILL : public Configuration::PointEntry
 	{
-		PosSKILL() : PointEntry("PosSKILL", "(50,150)") {}
+		PosSKILL() : PointEntry("PosSKILL", "(96,96)") {}
 	};
 
 	// The default position of the quest log.
 	struct PosQUEST : public Configuration::PointEntry
 	{
-		PosQUEST() : PointEntry("PosQUEST", "(300,150)") {}
+		PosQUEST() : PointEntry("PosQUEST", "(300,160)") {}
 	};
 
 	// The default position of the world map.
 	struct PosMAP : public Configuration::PointEntry
 	{
-		PosMAP() : PointEntry("PosMAP", "(100,25)") {}
+		PosMAP() : PointEntry("PosMAP", "(100,35)") {}
 	};
 
-	// The default position of the party.
+	// The default position of the userlist features.
 	struct PosUSERLIST : public Configuration::PointEntry
 	{
-		PosUSERLIST() : PointEntry("PosUSERLIST", "(104, 94)") {}
+		PosUSERLIST() : PointEntry("PosUSERLIST", "(104, 104)") {}
 	};
 
 	// The default position of the chatbar.
 	struct PosCHAT : public Configuration::PointEntry
 	{
-		PosCHAT() : PointEntry("PosCHAT", "(0, 562)") {}
-	};
-
-	// The default position of the skill inventory.
-	struct Chatopen : public Configuration::BoolEntry
-	{
-		Chatopen() : BoolEntry("Chatopen", "false") {}
+		PosCHAT() : PointEntry("PosCHAT", "(0, 572)") {}
 	};
 
 	// The default position of the mini map.
 	struct PosMINIMAP : public Configuration::PointEntry
 	{
 		PosMINIMAP() : PointEntry("PosMINIMAP", "(0, 0)") {}
+	};
+
+	// The default position of shops.
+	struct PosSHOP : public Configuration::PointEntry
+	{
+		PosSHOP() : PointEntry("PosSHOP", "(146, 48)") {}
+	};
+
+	// The default position of the notice windows.
+	struct PosNOTICE : public Configuration::PointEntry
+	{
+		PosNOTICE() : PointEntry("PosNOTICE", "(400, 285)") {}
+	};
+
+	// The default position of the maple chat.
+	struct PosMAPLECHAT : public Configuration::PointEntry
+	{
+		PosMAPLECHAT() : PointEntry("PosMAPLECHAT", "(50, 46)") {}
+	};
+
+	// The default position of the channel change.
+	struct PosCHANNEL : public Configuration::PointEntry
+	{
+		PosCHANNEL() : PointEntry("PosCHANNEL", "(215, 100)") {}
+	};
+
+	// The default position of the joypad.
+	struct PosJOYPAD : public Configuration::PointEntry
+	{
+		PosJOYPAD() : PointEntry("PosJOYPAD", "(312, 134)") {}
+	};
+
+	// The default position of the event list.
+	struct PosEVENT : public Configuration::PointEntry
+	{
+		PosEVENT() : PointEntry("PosEVENT", "(99, 100)") {}
+	};
+
+	// The default position of the key bindings.
+	struct PosKEYCONFIG : public Configuration::PointEntry
+	{
+		PosKEYCONFIG() : PointEntry("PosKEYCONFIG", "(65, 50)") {}
+	};
+
+	// The default position of the option menu.
+	struct PosOPTIONMENU : public Configuration::PointEntry
+	{
+		PosOPTIONMENU() : PointEntry("PosUSERLIST", "(170, -1)") {}
+	};
+
+	struct MiniMapType : public Configuration::ByteEntry
+	{
+		MiniMapType() : ByteEntry("MiniMapType", "0") {}
+	};
+
+	struct MiniMapSimpleMode : public Configuration::BoolEntry
+	{
+		MiniMapSimpleMode() : BoolEntry("MiniMapSimpleMode", "false") {}
+	};
+
+	struct MiniMapDefaultHelpers : public Configuration::BoolEntry
+	{
+		MiniMapDefaultHelpers() : BoolEntry("MiniMapDefaultHelpers", "false") {}
 	};
 
 	template <typename T>
@@ -325,11 +471,10 @@ namespace jrc
 		// Access a setting.
 		static T& get()
 		{
-			static_assert(std::is_base_of<Configuration::Entry, T>::value,
-				"template parameter T for Setting must inherit from Configuration::Entry.");
+			static_assert(std::is_base_of<Configuration::Entry, T>::value, "template parameter T for Setting must inherit from Configuration::Entry.");
 
-			auto* entry = Configuration::get()
-				.settings.get<T>();
+			auto* entry = Configuration::get().settings.get<T>();
+
 			if (entry)
 			{
 				return *entry;

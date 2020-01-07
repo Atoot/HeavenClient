@@ -1,20 +1,20 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "PacketSwitch.h"
 
 #include "Handlers/CommonHandlers.h"
@@ -29,11 +29,12 @@
 #include "Handlers/TestingHandlers.h"
 
 #include "../Console.h"
+#include "../Configuration.h"
 
-namespace jrc
+namespace ms
 {
 	// Opcodes for InPackets.
-	enum PacketSwitch::Opcode : uint16_t
+	enum Opcode : uint16_t
 	{
 		// Login 1
 		LOGIN_RESULT = 0,
@@ -117,7 +118,7 @@ namespace jrc
 		SHOW_FOREIGN_EFFECT = 198,
 		GIVE_FOREIGN_BUFF = 199,
 		CANCEL_FOREIGN_BUFF = 200,
-		SHOW_ITEM_GAIN_INCHAT = 206, // this is terribly named
+		SHOW_ITEM_GAIN_INCHAT = 206, // TODO: Rename this (Terribly named)
 		UPDATE_QUEST_INFO = 211,
 		LOCK_UI = 221,
 		TOGGLE_UI = 222,
@@ -137,6 +138,7 @@ namespace jrc
 		MAKE_NPC_SCRIPTED = 263,
 		DROP_LOOT = 268,
 		REMOVE_LOOT = 269,
+		HIT_REACTOR = 277,
 		SPAWN_REACTOR = 279,
 		REMOVE_REACTOR = 280,
 
@@ -158,6 +160,7 @@ namespace jrc
 		// Login handlers
 		emplace<LOGIN_RESULT, LoginResultHandler>();
 		emplace<SERVERLIST, ServerlistHandler>();
+		emplace<RECOMMENDED_WORLDS, RecommendedWorldsHandler>();
 		emplace<CHARLIST, CharlistHandler>();
 		emplace<CHARNAME_RESPONSE, CharnameResponseHandler>();
 		emplace<ADD_NEWCHAR_ENTRY, AddNewCharEntryHandler>();
@@ -183,6 +186,7 @@ namespace jrc
 		emplace<KILL_MOB, KillMobHandler>();
 		emplace<DROP_LOOT, DropLootHandler>();
 		emplace<REMOVE_LOOT, RemoveLootHandler>();
+		emplace<HIT_REACTOR, HitReactorHandler>();
 		emplace<SPAWN_REACTOR, SpawnReactorHandler>();
 		emplace<REMOVE_REACTOR, RemoveReactorHandler>();
 
@@ -231,7 +235,6 @@ namespace jrc
 
 		// Ignored
 		emplace<SELECT_WORLD, NullHandler>();
-		emplace<RECOMMENDED_WORLDS, NullHandler>();
 		emplace<UPDATE_GENDER, NullHandler>();
 
 		// New handlers for testing only
@@ -259,9 +262,12 @@ namespace jrc
 		// Read the opcode to determine handler responsible.
 		uint16_t opcode = recv.read_short();
 
+		if (Configuration::get().get_show_packets())
+			std::cout << "Received Packet: " << std::to_string(opcode) << std::endl;
+
 		if (opcode < NUM_HANDLERS)
 		{
-			if (auto& handler = handlers[opcode])
+			if (auto & handler = handlers[opcode])
 			{
 				// Handler ok. Packet is passed on.
 				try

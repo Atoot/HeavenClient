@@ -1,87 +1,106 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "LoginHandlers.h"
 
 #include "Helpers/LoginParser.h"
 
 #include "../Session.h"
+
 #include "../Packets/LoginPackets.h"
+#include "../IO/UI.h"
 
-#include "../../Configuration.h"
-#include "../../IO/UI.h"
-#include "../../IO/UITypes/UILogin.h"
-#include "../../IO/UITypes/UILoginNotice.h"
-#include "../../IO/UITypes/UIWorldSelect.h"
-#include "../../IO/UITypes/UICharSelect.h"
-#include "../../IO/UITypes/UICharCreation.h"
+#include "../IO/UITypes/UILoginNotice.h"
+#include "../IO/UITypes/UIWorldSelect.h"
+#include "../IO/UITypes/UICharSelect.h"
+#include "../IO/UITypes/UIRaceSelect.h"
+#include "../IO/UITypes/UILoginwait.h"
+#include "../IO/UITypes/UITermsOfService.h"
+#include "../IO/UITypes/UIGender.h"
 
-namespace jrc
+namespace ms
 {
 	void LoginResultHandler::handle(InPacket& recv) const
 	{
-		// Remove previous UIs.
-		UI::get().remove(UIElement::LOGINNOTICE);
-		UI::get().remove(UIElement::LOGINWAIT);
+		auto loginwait = UI::get().get_element<UILoginwait>();
 
-		// The packet should contain a 'reason' integer which can signify various things.
-		if (int32_t reason = recv.read_int())
+		if (loginwait && loginwait->is_active())
 		{
-			// Login unsuccessfull. The LoginNotice displayed will contain the specific information.
-			switch (reason)
+			// Remove previous UIs.
+			UI::get().remove(UIElement::Type::LOGINNOTICE);
+			UI::get().remove(UIElement::Type::LOGINWAIT);
+			UI::get().remove(UIElement::Type::TOS);
+			UI::get().remove(UIElement::Type::GENDER);
+
+			std::function<void()> okhandler = loginwait->get_handler();
+
+			// The packet should contain a 'reason' integer which can signify various things.
+			if (int32_t reason = recv.read_int())
 			{
-			case 2:
-				UI::get().emplace<UILoginNotice>(UILoginNotice::Message::BLOCKED_ID);
-				break;
-			case 7:
-				UI::get().emplace<UILoginNotice>(UILoginNotice::Message::ALREADY_LOGGED_IN);
-				break;
-			case 13:
-				UI::get().emplace<UILoginNotice>(UILoginNotice::Message::UNABLE_TO_LOGIN_WITH_IP);
-				break;
-			case 23:
-				// The server sends a request to accept the terms of service. For convenience, just auto-accept.
-				TOSPacket().dispatch();
-				break;
-			default:
-				// Other reasons.
-				if (reason > 0)
+				// Login unsuccessfull. The LoginNotice displayed will contain the specific information.
+				switch (reason)
 				{
-					auto reasonbyte = static_cast<int8_t>(reason - 1);
-					UI::get().emplace<UILoginNotice>(reasonbyte);
+				case 2:
+					UI::get().emplace<UILoginNotice>(UILoginNotice::Message::BLOCKED_ID, okhandler);
+					break;
+				case 5:
+					UI::get().emplace<UILoginNotice>(UILoginNotice::Message::NOT_REGISTERED, okhandler);
+					break;
+				case 7:
+					UI::get().emplace<UILoginNotice>(UILoginNotice::Message::ALREADY_LOGGED_IN, okhandler);
+					break;
+				case 13:
+					UI::get().emplace<UILoginNotice>(UILoginNotice::Message::UNABLE_TO_LOGIN_WITH_IP, okhandler);
+					break;
+				case 23:
+					// The server sends a request to accept the terms of service.
+					UI::get().emplace<UITermsOfService>(okhandler);
+					break;
+				default:
+					// Other reasons.
+					if (reason > 0)
+					{
+						auto reasonbyte = static_cast<int8_t>(reason - 1);
+
+						UI::get().emplace<UILoginNotice>(reasonbyte, okhandler);
+					}
 				}
 			}
+			else
+			{
+				// Login successfull. The packet contains information on the account, so we initialise the account with it.
+				Account account = LoginParser::parse_account(recv);
 
-			UI::get().enable();
-		}
-		else
-		{
-			// Login successfull. The packet contains information on the account, so we initialise the account with it.
-			Account account = LoginParser::parse_account(recv);
+				if (account.female == 10)
+				{
+					UI::get().emplace<UIGender>(okhandler);
+				}
+				else
+				{
+					// Save the Login ID if the box for it on the login panel is checked.
+					if (Setting<SaveLogin>::get().load())
+						Setting<DefaultAccount>::get().save(account.name);
 
-			// Save the Login ID if the box for it on the login panel is checked.
-			if (Setting<SaveLogin>::get().load())
-				Setting<DefaultAccount>::get().save(account.name);
-
-			// Request the list of worlds and channels online.
-			ServerRequestPacket().dispatch();
+					// Request the list of worlds and channels online.
+					ServerRequestPacket().dispatch();
+				}
+			}
 		}
 	}
-
 
 	void ServerlistHandler::handle(InPacket& recv) const
 	{
@@ -102,12 +121,10 @@ namespace jrc
 			else
 			{
 				// Remove previous UIs.
-				UI::get().remove(UIElement::LOGIN);
-				UI::get().remove(UIElement::CHARSELECT);
+				UI::get().remove(UIElement::Type::LOGIN);
 
 				// Add the world selection screen to the ui.
 				worldselect->draw_world();
-				UI::get().enable();
 
 				// "End of serverlist" packet.
 				return;
@@ -115,32 +132,52 @@ namespace jrc
 		}
 	}
 
+	void RecommendedWorldsHandler::handle(InPacket& recv) const
+	{
+		if (auto worldselect = UI::get().get_element<UIWorldSelect>())
+		{
+			int16_t count = recv.read_byte();
+
+			for (size_t i = 0; i < count; i++)
+			{
+				RecommendedWorld world = LoginParser::parse_recommended_world(recv);
+
+				if (world.wid != -1 && !world.message.empty())
+					worldselect->add_recommended_world(world);
+			}
+		}
+	}
 
 	void CharlistHandler::handle(InPacket& recv) const
 	{
-		uint8_t channel_id = recv.read_byte();
+		auto loginwait = UI::get().get_element<UILoginwait>();
 
-		// Parse all characters.
-		std::vector<CharEntry> characters;
-		uint8_t charcount = recv.read_byte();
+		if (loginwait && loginwait->is_active())
+		{
+			uint8_t channel_id = recv.read_byte();
 
-		for (uint8_t i = 0; i < charcount; ++i)
-			characters.emplace_back(LoginParser::parse_charentry(recv));
+			// Parse all characters.
+			std::vector<CharEntry> characters;
+			int8_t charcount = recv.read_byte();
 
-		int8_t pic = recv.read_byte();
-		uint8_t slots = (uint8_t)recv.read_int();
+			for (uint8_t i = 0; i < charcount; ++i)
+				characters.emplace_back(LoginParser::parse_charentry(recv));
 
-		// Remove previous UIs.
-		UI::get().remove(UIElement::CHARCREATION);
+			int8_t pic = recv.read_byte();
+			int32_t slots = recv.read_int();
 
-		// Add the character selection screen.
-		if (auto worldselect = UI::get().get_element<UIWorldSelect>())
-			worldselect->deactivate();
+			// Remove previous UIs.
+			UI::get().remove(UIElement::Type::LOGINNOTICE);
+			UI::get().remove(UIElement::Type::LOGINWAIT);
 
-		UI::get().emplace<UICharSelect>(characters, charcount, slots, pic);
-		UI::get().enable();
+			// Remove the world selection screen.
+			if (auto worldselect = UI::get().get_element<UIWorldSelect>())
+				worldselect->remove_selected();
+
+			// Add the character selection screen.
+			UI::get().emplace<UICharSelect>(characters, charcount, slots, pic);
+		}
 	}
-
 
 	void CharnameResponseHandler::handle(InPacket& recv) const
 	{
@@ -148,16 +185,10 @@ namespace jrc
 		std::string name = recv.read_string();
 		bool used = recv.read_bool();
 
-		if (used)
-			UI::get().emplace<UILoginNotice>(UILoginNotice::NAME_IN_USE);
-
 		// Notify the character creation screen.
-		if (auto charcreation = UI::get().get_element<UICharCreation>())
-			charcreation->send_naming_result(used);
-
-		UI::get().enable();
+		if (auto raceselect = UI::get().get_element<UIRaceSelect>())
+			raceselect->send_naming_result(used);
 	}
-
 
 	void AddNewCharEntryHandler::handle(InPacket& recv) const
 	{
@@ -169,10 +200,7 @@ namespace jrc
 		// Read the updated character selection.
 		if (auto charselect = UI::get().get_element<UICharSelect>())
 			charselect->add_character(std::move(character));
-
-		UI::get().enable();
 	}
-
 
 	void DeleteCharResponseHandler::handle(InPacket& recv) const
 	{
@@ -188,13 +216,13 @@ namespace jrc
 			switch (state)
 			{
 			case 10:
-				message = UILoginNotice::BIRTHDAY_INCORRECT;
+				message = UILoginNotice::Message::BIRTHDAY_INCORRECT;
 				break;
 			case 20:
-				message = UILoginNotice::SECOND_PASSWORD_INCORRECT;
+				message = UILoginNotice::Message::INCORRECT_PIC;
 				break;
 			default:
-				message = UILoginNotice::UNKNOWN_ERROR;
+				message = UILoginNotice::Message::UNKNOWN_ERROR;
 			}
 
 			UI::get().emplace<UILoginNotice>(message);
@@ -202,18 +230,15 @@ namespace jrc
 		else
 		{
 			if (auto charselect = UI::get().get_element<UICharSelect>())
-				charselect->remove_char(cid);
+				charselect->remove_character(cid);
 		}
-
-		UI::get().enable();
 	}
-
 
 	void ServerIPHandler::handle(InPacket& recv) const
 	{
 		recv.skip(2);
 
-		// Read the ipv4 adress in a string.
+		// Read the ipv4 address in a string.
 		std::string addrstr;
 
 		for (int i = 0; i < 4; i++)
@@ -225,7 +250,7 @@ namespace jrc
 				addrstr.push_back('.');
 		}
 
-		// Read the port adress in a string.
+		// Read the port address in a string.
 		std::string portstr = std::to_string(recv.read_short());
 
 		int32_t cid = recv.read_int();

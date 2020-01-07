@@ -1,36 +1,34 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "Textfield.h"
 
 #include "../UI.h"
 
-#include "../../Constants.h"
-
-namespace jrc
+namespace ms
 {
-	Textfield::Textfield(Text::Font font, Text::Alignment alignment, Text::Color color, Rectangle<int16_t> bnd, size_t lim) : textlabel(font, alignment, color, "", 0, false), marker(font, alignment, color, "|")
+	Textfield::Textfield(Text::Font font, Text::Alignment alignment, Color::Name color, Rectangle<int16_t> bnd, size_t lim) : textlabel(font, alignment, color, "", 0, false), marker(font, alignment, color, "|")
 	{
 		bounds = bnd;
 		limit = lim;
 		text = "";
 		markerpos = 0;
 		crypt = 0;
-		state = NORMAL;
+		state = State::NORMAL;
 	}
 
 	Textfield::Textfield()
@@ -42,7 +40,7 @@ namespace jrc
 
 	void Textfield::draw(Point<int16_t> parent) const
 	{
-		if (state == DISABLED)
+		if (state == State::DISABLED)
 			return;
 
 		Point<int16_t> absp = bounds.getlt() + parent;
@@ -50,7 +48,7 @@ namespace jrc
 		if (text.size() > 0)
 			textlabel.draw(absp);
 
-		if (state == FOCUSED && showmarker)
+		if (state == State::FOCUSED && showmarker)
 		{
 			Point<int16_t> mpos = absp + Point<int16_t>(textlabel.advance(markerpos), -1);
 			marker.draw(mpos);
@@ -59,7 +57,7 @@ namespace jrc
 
 	void Textfield::update(Point<int16_t> parent)
 	{
-		if (state == DISABLED)
+		if (state == State::DISABLED)
 			return;
 
 		parentpos = parent;
@@ -78,17 +76,17 @@ namespace jrc
 		{
 			state = st;
 
-			if (state != DISABLED)
+			if (state != State::DISABLED)
 			{
-			elapsed = 0;
-			showmarker = true;
+				elapsed = 0;
+				showmarker = true;
 			}
 			else
 			{
 				UI::get().remove_textfield();
 			}
 
-			if (state == FOCUSED)
+			if (state == State::FOCUSED)
 				UI::get().focus_textfield(this);
 		}
 	}
@@ -107,22 +105,22 @@ namespace jrc
 	{
 		switch (type)
 		{
-		case KeyType::ACTION:
+		case KeyType::Id::ACTION:
 			if (pressed)
 			{
 				switch (key)
 				{
-				case KeyAction::LEFT:
+				case KeyAction::Id::LEFT:
 					if (markerpos > 0)
 						markerpos--;
 
 					break;
-				case KeyAction::RIGHT:
+				case KeyAction::Id::RIGHT:
 					if (markerpos < text.size())
 						markerpos++;
 
 					break;
-				case KeyAction::BACK:
+				case KeyAction::Id::BACK:
 					if (text.size() > 0 && markerpos > 0)
 					{
 						text.erase(markerpos - 1, 1);
@@ -131,18 +129,13 @@ namespace jrc
 					}
 
 					break;
-				case KeyAction::RETURN:
+				case KeyAction::Id::RETURN:
 					if (onreturn)
-					{
 						onreturn(text);
-						text = "";
-						markerpos = 0;
-						modifytext(text);
-					}
 
 					break;
-				case KeyAction::SPACE:
-					if (markerpos > 0 && belowlimit())
+				case KeyAction::Id::SPACE:
+					if (belowlimit())
 					{
 						text.insert(markerpos, 1, ' ');
 						markerpos++;
@@ -150,13 +143,13 @@ namespace jrc
 					}
 
 					break;
-				case KeyAction::HOME:
+				case KeyAction::Id::HOME:
 					markerpos = 0;
 					break;
-				case KeyAction::END:
+				case KeyAction::Id::END:
 					markerpos = text.size();
 					break;
-				case KeyAction::DELETE:
+				case KeyAction::Id::DELETE:
 					if (text.size() > 0 && markerpos < text.size())
 					{
 						text.erase(markerpos, 1);
@@ -173,8 +166,8 @@ namespace jrc
 			}
 
 			break;
-		case KeyType::TEXT:
-			if (!pressed)
+		case KeyType::Id::TEXT:
+			if (pressed)
 			{
 				int8_t c = static_cast<int8_t>(key);
 
@@ -221,8 +214,8 @@ namespace jrc
 
 	Cursor::State Textfield::send_cursor(Point<int16_t> cursorpos, bool clicked)
 	{
-		if (state == DISABLED)
-			return Cursor::IDLE;
+		if (state == State::DISABLED)
+			return Cursor::State::IDLE;
 
 		auto abs_bounds = get_bounds();
 
@@ -232,16 +225,16 @@ namespace jrc
 			{
 				switch (state)
 				{
-				case NORMAL:
-					set_state(FOCUSED);
+				case State::NORMAL:
+					set_state(State::FOCUSED);
 					break;
 				}
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
-				return Cursor::CANCLICK;
+				return Cursor::State::CANCLICK;
 			}
 		}
 		else
@@ -250,13 +243,13 @@ namespace jrc
 			{
 				switch (state)
 				{
-				case FOCUSED:
-					set_state(NORMAL);
+				case State::FOCUSED:
+					set_state(State::NORMAL);
 					break;
 				}
 			}
 
-			return Cursor::IDLE;
+			return Cursor::State::IDLE;
 		}
 	}
 

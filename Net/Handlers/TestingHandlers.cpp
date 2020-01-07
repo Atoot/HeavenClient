@@ -1,30 +1,31 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "TestingHandlers.h"
 
-#include "../../Configuration.h"
+#include "../Configuration.h"
 
 #include "../Packets/LoginPackets.h"
+#include "../Gameplay/Stage.h"
+#include "../IO/UI.h"
 
-#include "../../IO/UI.h"
-#include "../../IO/UITypes/UILoginNotice.h"
+#include "../IO/UITypes/UILoginNotice.h"
 
-namespace jrc
+namespace ms
 {
 	void CheckSpwResultHandler::handle(InPacket& recv) const
 	{
@@ -41,9 +42,43 @@ namespace jrc
 	void FieldEffectHandler::handle(InPacket& recv) const
 	{
 		int rand = recv.read_byte();
-		std::string path = recv.read_string();
 
-		std::cout << "[FieldEffectHandler]: Random Value: " << rand << " Path: " << path << std::endl;
+		switch (rand)
+		{
+		case 1:
+		{
+			auto type = recv.read_byte();
+			auto delay = recv.read_int();
+		}
+		break;
+		case 5:
+		{
+			int32_t oid = recv.read_int();
+			int32_t currHP = recv.read_int();
+			int32_t maxHP = recv.read_int();
+			int8_t tagColor = recv.read_byte();
+			int8_t tagBgColor = recv.read_byte();
+		}
+		break;
+		case 3:
+		{
+			// Effect
+			std::string path = recv.read_string();
+
+			Stage::get().add_effect(path);
+		}
+		return;
+		case 4:
+		{
+			// Sound
+			std::string path = recv.read_string();
+		}
+		break;
+		default:
+			break;
+		}
+
+		std::cout << "[FieldEffectHandler]: Unhandled " << rand << std::endl;
 	}
 
 	void FieldObstacleOnOffListHandler::handle(InPacket& recv) const
@@ -128,11 +163,7 @@ namespace jrc
 		int lockUi = recv.read_byte();
 
 		if (lockUi)
-		{
-			// TODO: Lock UI?
-		}
-
-		std::cout << "[LockUiHandler]: Lock UI? " << lockUi << std::endl;
+			std::cout << "[LockUiHandler]: Lock UI? " << lockUi << std::endl;
 	}
 
 	void ToggleUiHandler::handle(InPacket& recv) const
@@ -140,11 +171,7 @@ namespace jrc
 		int disableUi = recv.read_byte();
 
 		if (disableUi)
-		{
-			// TODO: Disable UI?
-		}
-
-		std::cout << "[ToggleUiHandler]: Disable UI? " << disableUi << std::endl;
+			std::cout << "[ToggleUiHandler]: Disable UI? " << disableUi << std::endl;
 	}
 
 	void ConfirmShopTransactionHandler::handle(InPacket& recv) const
@@ -165,13 +192,15 @@ namespace jrc
 	{
 		int item = recv.read_byte();
 
-		std::cout << "[AutoHpPotHandler]: Item: " << item << std::endl;
+		if (item > 0)
+			std::cout << "[AutoHpPotHandler]: Item: " << item << std::endl;
 	}
 
 	void AutoMpPotHandler::handle(InPacket& recv) const
 	{
 		int item = recv.read_byte();
 
-		std::cout << "[AutoMpPotHandler]: Item: " << item << std::endl;
+		if (item > 0)
+			std::cout << "[AutoMpPotHandler]: Item: " << item << std::endl;
 	}
 }

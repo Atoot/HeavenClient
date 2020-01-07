@@ -1,28 +1,25 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "GraphicsGL.h"
 
 #include "../Configuration.h"
-#include "../Console.h"
 
-#include <algorithm>
-
-namespace jrc
+namespace ms
 {
 	GraphicsGL::GraphicsGL()
 	{
@@ -30,21 +27,21 @@ namespace jrc
 
 		VWIDTH = Constants::Constants::get().get_viewwidth();
 		VHEIGHT = Constants::Constants::get().get_viewheight();
-		SCREEN = Rectangle<int16_t>(0, VWIDTH, -Constants::VIEWYOFFSET, -Constants::VIEWYOFFSET + VHEIGHT);
+		SCREEN = Rectangle<int16_t>(0, VWIDTH, 0, VHEIGHT);
 	}
 
 	Error GraphicsGL::init()
 	{
 		if (glewInit())
-			return Error::GLEW;
+			return Error::Code::GLEW;
 
 		if (FT_Init_FreeType(&ftlibrary))
-			return Error::FREETYPE;
+			return Error::Code::FREETYPE;
 
 		GLint result = GL_FALSE;
 		GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 
-		const char *vs_source =
+		const char* vs_source =
 			"#version 120\n"
 			"attribute vec4 coord;"
 			"attribute vec4 color;"
@@ -53,7 +50,8 @@ namespace jrc
 			"uniform vec2 screensize;"
 			"uniform int yoffset;"
 
-			"void main(void) {"
+			"void main(void)"
+			"{"
 			"	float x = -1.0 + coord.x * 2.0 / screensize.x;"
 			"	float y = 1.0 - (coord.y + yoffset) * 2.0 / screensize.y;"
 			"   gl_Position = vec4(x, y, 0.0, 1.0);"
@@ -66,11 +64,11 @@ namespace jrc
 		glGetShaderiv(vs, GL_COMPILE_STATUS, &result);
 
 		if (!result)
-			return Error::VERTEX_SHADER;
+			return Error::Code::VERTEX_SHADER;
 
 		GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
 
-		const char *fs_source =
+		const char* fs_source =
 			"#version 120\n"
 			"varying vec2 texpos;"
 			"varying vec4 colormod;"
@@ -78,12 +76,18 @@ namespace jrc
 			"uniform vec2 atlassize;"
 			"uniform int fontregion;"
 
-			"void main(void) {"
-			"	if (texpos.y == 0) {"
+			"void main(void)"
+			"{"
+			"	if (texpos.y == 0)"
+			"	{"
 			"		gl_FragColor = colormod;"
-			"	} else if (texpos.y <= fontregion) {"
+			"	}"
+			"	else if (texpos.y <= fontregion)"
+			"	{"
 			"		gl_FragColor = vec4(1, 1, 1, texture2D(texture, texpos / atlassize).r) * colormod;"
-			"	} else {"
+			"	}"
+			"	else"
+			"	{"
 			"		gl_FragColor = texture2D(texture, texpos / atlassize) * colormod;"
 			"	}"
 			"}";
@@ -93,7 +97,7 @@ namespace jrc
 		glGetShaderiv(fs, GL_COMPILE_STATUS, &result);
 
 		if (!result)
-			return Error::FRAGMENT_SHADER;
+			return Error::Code::FRAGMENT_SHADER;
 
 		program = glCreateProgram();
 
@@ -103,7 +107,7 @@ namespace jrc
 		glGetProgramiv(program, GL_LINK_STATUS, &result);
 
 		if (!result)
-			return Error::SHADER_PROGRAM;
+			return Error::Code::SHADER_PROGRAM;
 
 		attribute_coord = glGetAttribLocation(program, "coord");
 		attribute_color = glGetAttribLocation(program, "color");
@@ -114,7 +118,7 @@ namespace jrc
 		uniform_fontregion = glGetUniformLocation(program, "fontregion");
 
 		if (attribute_coord == -1 || attribute_color == -1 || uniform_texture == -1 || uniform_atlassize == -1 || uniform_yoffset == -1 || uniform_screensize == -1)
-			return Error::SHADER_VARS;
+			return Error::Code::SHADER_VARS;
 
 		glGenBuffers(1, &vbo);
 
@@ -136,14 +140,14 @@ namespace jrc
 		const char* FONT_NORMAL_STR = FONT_NORMAL.c_str();
 		const char* FONT_BOLD_STR = FONT_BOLD.c_str();
 
-		addfont(FONT_NORMAL_STR, Text::A11M, 0, 11);
-		addfont(FONT_BOLD_STR, Text::A11B, 0, 11);
-		addfont(FONT_NORMAL_STR, Text::A12M, 0, 12);
-		addfont(FONT_BOLD_STR, Text::A12B, 0, 12);
-		addfont(FONT_NORMAL_STR, Text::A13M, 0, 13);
-		addfont(FONT_BOLD_STR, Text::A13B, 0, 13);
-		addfont(FONT_BOLD_STR, Text::A15B, 0, 15);
-		addfont(FONT_NORMAL_STR, Text::A18M, 0, 18);
+		addfont(FONT_NORMAL_STR, Text::Font::A11M, 0, 11);
+		addfont(FONT_BOLD_STR, Text::Font::A11B, 0, 11);
+		addfont(FONT_NORMAL_STR, Text::Font::A12M, 0, 12);
+		addfont(FONT_BOLD_STR, Text::Font::A12B, 0, 12);
+		addfont(FONT_NORMAL_STR, Text::Font::A13M, 0, 13);
+		addfont(FONT_BOLD_STR, Text::Font::A13B, 0, 13);
+		addfont(FONT_BOLD_STR, Text::Font::A15B, 0, 15);
+		addfont(FONT_NORMAL_STR, Text::Font::A18M, 0, 18);
 
 		fontymax += fontborder.y();
 
@@ -154,17 +158,17 @@ namespace jrc
 				bool hcomp = first.height() >= second.height();
 
 				if (wcomp && hcomp)
-					return QuadTree<size_t, Leftover>::RIGHT;
+					return QuadTree<size_t, Leftover>::Direction::RIGHT;
 				else if (wcomp)
-					return QuadTree<size_t, Leftover>::DOWN;
+					return QuadTree<size_t, Leftover>::Direction::DOWN;
 				else if (hcomp)
-					return QuadTree<size_t, Leftover>::UP;
+					return QuadTree<size_t, Leftover>::Direction::UP;
 				else
-					return QuadTree<size_t, Leftover>::LEFT;
+					return QuadTree<size_t, Leftover>::Direction::LEFT;
 			}
 		);
 
-		return Error::NONE;
+		return Error::Code::NONE;
 	}
 
 	bool GraphicsGL::addfont(const char* name, Text::Font id, FT_UInt pixelw, FT_UInt pixelh)
@@ -248,12 +252,11 @@ namespace jrc
 		{
 			VWIDTH = new_width;
 			VHEIGHT = new_height;
-			SCREEN = Rectangle<int16_t>(0, VWIDTH, -Constants::VIEWYOFFSET, -Constants::VIEWYOFFSET + VHEIGHT);
+			SCREEN = Rectangle<int16_t>(0, VWIDTH, 0, VHEIGHT);
 		}
 
 		glUseProgram(program);
 
-		glUniform1i(uniform_yoffset, Constants::VIEWYOFFSET);
 		glUniform1i(uniform_fontregion, fontymax);
 		glUniform2f(uniform_atlassize, ATLASW, ATLASH);
 		glUniform2f(uniform_screensize, VWIDTH, VHEIGHT);
@@ -394,7 +397,7 @@ namespace jrc
 
 				wasted += x * (h - yrange.second());
 
-				yrange = { y + h, h };
+				yrange = Range<int16_t>(y + h, h);
 			}
 			else if (h < yrange.first() - y)
 			{
@@ -436,14 +439,14 @@ namespace jrc
 		quads.emplace_back(rect.l(), rect.r(), rect.t(), rect.b(), getoffset(bmp), color, angle);
 	}
 
-	Text::Layout GraphicsGL::createlayout(const std::string& text, Text::Font id, Text::Alignment alignment, int16_t maxwidth, bool formatted)
+	Text::Layout GraphicsGL::createlayout(const std::string& text, Text::Font id, Text::Alignment alignment, int16_t maxwidth, bool formatted, int16_t line_adj)
 	{
 		size_t length = text.length();
 
 		if (length == 0)
-			return{};
+			return Text::Layout();
 
-		LayoutBuilder builder(fonts[id], alignment, maxwidth, formatted);
+		LayoutBuilder builder(fonts[id], alignment, maxwidth, formatted, line_adj);
 
 		const char* p_text = text.c_str();
 
@@ -464,10 +467,10 @@ namespace jrc
 		return builder.finish(first, offset);
 	}
 
-	GraphicsGL::LayoutBuilder::LayoutBuilder(const Font& f, Text::Alignment a, int16_t mw, bool fm) : font(f), alignment(a), maxwidth(mw), formatted(fm)
+	GraphicsGL::LayoutBuilder::LayoutBuilder(const Font& f, Text::Alignment a, int16_t mw, bool fm, int16_t la) : font(f), alignment(a), maxwidth(mw), formatted(fm), line_adj(la)
 	{
-		fontid = Text::NUM_FONTS;
-		color = Text::NUM_COLORS;
+		fontid = Text::Font::NUM_FONTS;
+		color = Color::Name::NUM_COLORS;
 		ax = 0;
 		ay = font.linespace();
 		width = 0;
@@ -483,7 +486,7 @@ namespace jrc
 			return prev;
 
 		Text::Font last_font = fontid;
-		Text::Color last_color = color;
+		Color::Name last_color = color;
 		size_t skip = 0;
 		bool linebreak = false;
 
@@ -515,16 +518,16 @@ namespace jrc
 					switch (text[first + 1])
 					{
 					case 'k':
-						color = Text::DARKGREY;
+						color = Color::Name::DARKGREY;
 						break;
 					case 'b':
-						color = Text::BLUE;
+						color = Color::Name::BLUE;
 						break;
 					case 'r':
-						color = Text::RED;
+						color = Color::Name::RED;
 						break;
 					case 'c':
-						color = Text::ORANGE;
+						color = Color::Name::ORANGE;
 						break;
 					}
 
@@ -573,6 +576,9 @@ namespace jrc
 			endy = ay;
 			ax = 0;
 			ay += font.linespace();
+
+			if (lines.size() > 0)
+				ay -= line_adj;
 		}
 
 		for (size_t pos = first; pos < last; pos++)
@@ -604,10 +610,10 @@ namespace jrc
 
 		advances.push_back(ax);
 
-		return{ lines, advances, width, ay, ax, endy };
+		return Text::Layout(lines, advances, width, ay, ax, endy);
 	}
 
-	void GraphicsGL::LayoutBuilder::add_word(size_t word_first, size_t word_last, Text::Font word_font, Text::Color word_color)
+	void GraphicsGL::LayoutBuilder::add_word(size_t word_first, size_t word_last, Text::Font word_font, Color::Name word_color)
 	{
 		words.push_back({ word_first, word_last, word_font, word_color });
 	}
@@ -619,10 +625,10 @@ namespace jrc
 
 		switch (alignment)
 		{
-		case Text::CENTER:
+		case Text::Alignment::CENTER:
 			line_x -= ax / 2;
 			break;
-		case Text::RIGHT:
+		case Text::Alignment::RIGHT:
 			line_x -= ax;
 			break;
 		}
@@ -631,7 +637,7 @@ namespace jrc
 		words.clear();
 	}
 
-	void GraphicsGL::drawtext(const DrawArgument& args, const std::string& text, const Text::Layout& layout, Text::Font id, Text::Color colorid, Text::Background background)
+	void GraphicsGL::drawtext(const DrawArgument& args, const std::string& text, const Text::Layout& layout, Text::Font id, Color::Name colorid, Text::Background background)
 	{
 		if (locked)
 			return;
@@ -650,14 +656,15 @@ namespace jrc
 
 		switch (background)
 		{
-		case Text::NAMETAG:
+		case Text::Background::NAMETAG:
+			// If ever changing code in here confirm placements with map 10000
 			for (const Text::Layout::Line& line : layout)
 			{
-				GLshort left = x + line.position.x() - 2;
+				GLshort left = x + line.position.x() - 1;
 				GLshort right = left + w + 3;
-				GLshort top = y + line.position.y() - font.linespace() + 5;
+				GLshort top = y + line.position.y() - font.linespace() + 6;
 				GLshort bottom = top + h - 2;
-				Color ntcolor{ 0.0f, 0.0f, 0.0f, 0.6f };
+				Color ntcolor = Color(0.0f, 0.0f, 0.0f, 0.6f);
 
 				quads.emplace_back(left, right, top, bottom, nulloffset, ntcolor, 0.0f);
 				quads.emplace_back(left - 1, left, top + 1, bottom - 1, nulloffset, ntcolor, 0.0f);
@@ -666,30 +673,6 @@ namespace jrc
 
 			break;
 		}
-
-		constexpr GLfloat colors[Text::NUM_COLORS][3] =
-		{
-			{ 0.0f, 0.0f, 0.0f }, // Black
-			{ 1.0f, 1.0f, 1.0f }, // White
-			{ 1.0f, 1.0f, 0.0f }, // Yellow
-			{ 0.0f, 0.0f, 1.0f }, // Blue
-			{ 1.0f, 0.0f, 0.0f }, // Red
-			{ 0.8f, 0.3f, 0.3f }, // DarkRed
-			{ 0.5f, 0.25f, 0.0f }, // Brown
-			{ 0.34f, 0.2f, 0.07f }, // Jambalaya
-			{ 0.5f, 0.5f, 0.5f }, // Lightgrey
-			{ 0.25f, 0.25f, 0.25f }, // Darkgrey
-			{ 1.0f, 0.5f, 0.0f }, // Orange
-			{ 0.0f, 0.75f, 1.0f }, // Mediumblue
-			{ 0.5f, 0.0f, 0.5f }, // Violet
-			{ 0.47f, 0.4f, 0.27f }, // Tobacco Brown
-			{ 0.74f, 0.74f, 0.67f }, // Eagle
-			{ 0.6f, 0.6f, 0.54f }, // Lemon Grass
-			{ 0.2f, 0.2f, 0.27f }, // Tuna
-			{ 0.94f, 0.94f, 0.94f }, // Gallery
-			{ 0.6f, 0.6f, 0.6f }, // Dusty Gray
-			{ 0.34f, 0.34f, 0.34f } // Emperor
-		};
 
 		for (const Text::Layout::Line& line : layout)
 		{
@@ -702,12 +685,12 @@ namespace jrc
 
 				const GLfloat* wordcolor;
 
-				if (word.color < Text::NUM_COLORS)
-					wordcolor = colors[word.color];
+				if (word.color < Color::Name::NUM_COLORS)
+					wordcolor = Color::colors[word.color];
 				else
-					wordcolor = colors[colorid];
+					wordcolor = Color::colors[colorid];
 
-				Color abscolor = color * Color{ wordcolor[0], wordcolor[1], wordcolor[2], 1.0f };
+				Color abscolor = color * Color(wordcolor[0], wordcolor[1], wordcolor[2], 1.0f);
 
 				for (size_t pos = word.first; pos < word.last; ++pos)
 				{
@@ -738,12 +721,12 @@ namespace jrc
 		if (locked)
 			return;
 
-		quads.emplace_back(x, x + w, y, y + h, nulloffset, Color{ r, g, b, a }, 0.0f);
+		quads.emplace_back(x, x + w, y, y + h, nulloffset, Color(r, g, b, a), 0.0f);
 	}
 
 	void GraphicsGL::drawscreenfill(float r, float g, float b, float a)
 	{
-		drawrectangle(0, -Constants::VIEWYOFFSET, VWIDTH, VHEIGHT, r, g, b, a);
+		drawrectangle(0, 0, VWIDTH, VHEIGHT, r, g, b, a);
 	}
 
 	void GraphicsGL::lock()
@@ -763,7 +746,7 @@ namespace jrc
 		if (coverscene)
 		{
 			float complement = 1.0f - opacity;
-			Color color{ 0.0f, 0.0f, 0.0f, complement };
+			Color color = Color(0.0f, 0.0f, 0.0f, complement);
 
 			quads.emplace_back(SCREEN.l(), SCREEN.r(), SCREEN.t(), SCREEN.b(), nulloffset, color, 0.0f);
 		}

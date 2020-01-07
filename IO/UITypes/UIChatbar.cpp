@@ -1,29 +1,29 @@
-//////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #include "UIChatbar.h"
 
 #include "../Components/MapleButton.h"
 
 #include "../Net/Packets/MessagingPackets.h"
 
-#include "nlnx/nx.hpp"
+#include <nlnx/nx.hpp>
 
-namespace jrc
+namespace ms
 {
 	UIChatbar::UIChatbar() : UIDragElement<PosCHAT>(Point<int16_t>(410, -5))
 	{
@@ -49,58 +49,65 @@ namespace jrc
 		int16_t chattop_y = getchattop(true) - 33;
 		closechat = Point<int16_t>(387, 21);
 
-		buttons[BT_OPENCHAT] = std::make_unique<MapleButton>(view["btMax"], Point<int16_t>(391, -7));
-		buttons[BT_CLOSECHAT] = std::make_unique<MapleButton>(view["btMin"], closechat + Point<int16_t>(0, chattop_y));
-		buttons[BT_CHAT] = std::make_unique<MapleButton>(input["button:chat"], Point<int16_t>(344, -8));
-		buttons[BT_LINK] = std::make_unique<MapleButton>(input["button:itemLink"], Point<int16_t>(365, -8));
-		buttons[BT_HELP] = std::make_unique<MapleButton>(input["button:help"], Point<int16_t>(386, -8));
+		buttons[Buttons::BT_OPENCHAT] = std::make_unique<MapleButton>(view["btMax"], Point<int16_t>(391, -7));
+		buttons[Buttons::BT_CLOSECHAT] = std::make_unique<MapleButton>(view["btMin"], closechat + Point<int16_t>(0, chattop_y));
+		buttons[Buttons::BT_CHAT] = std::make_unique<MapleButton>(input["button:chat"], Point<int16_t>(344, -8));
+		buttons[Buttons::BT_LINK] = std::make_unique<MapleButton>(input["button:itemLink"], Point<int16_t>(365, -8));
+		buttons[Buttons::BT_HELP] = std::make_unique<MapleButton>(input["button:help"], Point<int16_t>(386, -8));
 
-		buttons[chatopen ? BT_OPENCHAT : BT_CLOSECHAT]->set_active(false);
-		buttons[BT_CHAT]->set_active(chatopen ? true : false);
-		buttons[BT_LINK]->set_active(chatopen ? true : false);
-		buttons[BT_HELP]->set_active(chatopen ? true : false);
+		buttons[chatopen ? Buttons::BT_OPENCHAT : Buttons::BT_CLOSECHAT]->set_active(false);
+		buttons[Buttons::BT_CHAT]->set_active(chatopen ? true : false);
+		buttons[Buttons::BT_LINK]->set_active(chatopen ? true : false);
+		buttons[Buttons::BT_HELP]->set_active(chatopen ? true : false);
 
 		chattab_x = 6;
 		chattab_y = chattop_y;
 		chattab_span = 54;
 
-		for (size_t i = 0; i < NUM_CHATTAB; i++)
+		for (size_t i = 0; i < ChatTab::NUM_CHATTAB; i++)
 		{
-			buttons[BT_TAB_0 + i] = std::make_unique<MapleButton>(view["tab"], Point<int16_t>(chattab_x + (i * chattab_span), chattab_y));
-			buttons[BT_TAB_0 + i]->set_active(chatopen ? true : false);
-			chattab_text[CHT_ALL + i] = Text(Text::Font::A12M, Text::Alignment::CENTER, Text::Color::DUSTYGRAY, ChatTabText[i]);
+			buttons[Buttons::BT_TAB_0 + i] = std::make_unique<MapleButton>(view["tab"], Point<int16_t>(chattab_x + (i * chattab_span), chattab_y));
+			buttons[Buttons::BT_TAB_0 + i]->set_active(chatopen ? true : false);
+			chattab_text[ChatTab::CHT_ALL + i] = Text(Text::Font::A12M, Text::Alignment::CENTER, Color::Name::DUSTYGRAY, ChatTabText[i]);
 		}
 
-		chattab_text[CHT_ALL].change_color(Text::Color::WHITE);
+		chattab_text[ChatTab::CHT_ALL].change_color(Color::Name::WHITE);
 
-		buttons[BT_TAB_0 + NUM_CHATTAB] = std::make_unique<MapleButton>(view["btAddTab"], Point<int16_t>(chattab_x + (NUM_CHATTAB * chattab_span), chattab_y));
-		buttons[BT_TAB_0 + NUM_CHATTAB]->set_active(chatopen ? true : false);
+		buttons[Buttons::BT_TAB_0 + ChatTab::NUM_CHATTAB] = std::make_unique<MapleButton>(view["btAddTab"], Point<int16_t>(chattab_x + (ChatTab::NUM_CHATTAB * chattab_span), chattab_y));
+		buttons[Buttons::BT_TAB_0 + ChatTab::NUM_CHATTAB]->set_active(chatopen ? true : false);
 
-		buttons[BT_CHAT_TARGET] = std::make_unique<MapleButton>(chatTarget["all"], Point<int16_t>(5, -8));
-		buttons[BT_CHAT_TARGET]->set_active(chatopen ? true : false);
+		buttons[Buttons::BT_CHAT_TARGET] = std::make_unique<MapleButton>(chatTarget["all"], Point<int16_t>(5, -8));
+		buttons[Buttons::BT_CHAT_TARGET]->set_active(chatopen ? true : false);
 
 		chatenter = input["layer:chatEnter"];
 		chatcover = input["layer:backgrnd"];
 
-		chatfield = Textfield(Text::A11M, Text::LEFT, Text::WHITE, Rectangle<int16_t>(Point<int16_t>(62, -9), Point<int16_t>(330, 8)), 0);
+		chatfield = Textfield(Text::A11M, Text::LEFT, Color::Name::WHITE, Rectangle<int16_t>(Point<int16_t>(62, -9), Point<int16_t>(330, 8)), 0);
 		chatfield.set_state(chatopen ? Textfield::State::NORMAL : Textfield::State::DISABLED);
 
 		chatfield.set_enter_callback(
-			[&](std::string msg) {
+			[&](std::string msg)
+			{
 				if (msg.size() > 0)
 				{
-				size_t last = msg.find_last_not_of(' ');
+					size_t last = msg.find_last_not_of(' ');
 
-				if (last != std::string::npos)
-				{
-					msg.erase(last + 1);
+					if (last != std::string::npos)
+					{
+						msg.erase(last + 1);
 
-					GeneralChatPacket(msg, true).dispatch();
+						GeneralChatPacket(msg, true).dispatch();
 
-					lastentered.push_back(msg);
-					lastpos = lastentered.size();
+						lastentered.push_back(msg);
+						lastpos = lastentered.size();
+					}
+					else
+					{
+						toggle_chatfield();
+					}
+
+					chatfield.change_text("");
 				}
-			}
 				else
 				{
 					toggle_chatfield();
@@ -109,7 +116,9 @@ namespace jrc
 		);
 
 		chatfield.set_key_callback(
-			KeyAction::UP, [&]() {
+			KeyAction::Id::UP,
+			[&]()
+			{
 				if (lastpos > 0)
 				{
 					lastpos--;
@@ -119,7 +128,9 @@ namespace jrc
 		);
 
 		chatfield.set_key_callback(
-			KeyAction::DOWN, [&]() {
+			KeyAction::Id::DOWN,
+			[&]()
+			{
 				if (lastentered.size() > 0 && lastpos < lastentered.size() - 1)
 				{
 					lastpos++;
@@ -129,7 +140,9 @@ namespace jrc
 		);
 
 		chatfield.set_key_callback(
-			KeyAction::ESCAPE, [&]() {
+			KeyAction::Id::ESCAPE,
+			[&]()
+			{
 				toggle_chatfield(false);
 			}
 		);
@@ -144,7 +157,6 @@ namespace jrc
 		send_chatline("[Welcome] Welcome to MapleStory!!", LineType::YELLOW);
 
 		dimension = Point<int16_t>(410, DIMENSION_Y);
-		active = true;
 
 		/*if (chatopen)
 			dimension.shift_y(getchatbarheight());*/
@@ -154,17 +166,19 @@ namespace jrc
 	{
 		UIElement::draw_sprites(inter);
 
-		int16_t chattop = getchattop(chatopen);
-
 		if (chatopen)
 		{
-			chatspace[0].draw(position + Point<int16_t>(0, chattop));
+			int16_t chattop = getchattop(chatopen);
+
+			auto pos_adj = chatfieldopen ? Point<int16_t>(0, 0) : Point<int16_t>(0, 28);
+
+			chatspace[0].draw(position + Point<int16_t>(0, chattop) + pos_adj);
 
 			if (chatrows > 1)
-				chatspace[1].draw(DrawArgument(position + Point<int16_t>(0, -28), Point<int16_t>(0, 28 + chattop)));
+				chatspace[1].draw(DrawArgument(position + Point<int16_t>(0, -28) + pos_adj, Point<int16_t>(0, 28 + chattop)));
 
-			chatspace[2].draw(position + Point<int16_t>(0, -28));
-			chatspace[3].draw(position + Point<int16_t>(0, -15 + chattop));
+			chatspace[2].draw(position + Point<int16_t>(0, -28) + pos_adj);
+			chatspace[3].draw(position + Point<int16_t>(0, -15 + chattop) + pos_adj);
 
 			//slider.draw(position);
 
@@ -185,18 +199,20 @@ namespace jrc
 					textheight--;
 				}
 
-				rowtexts.at(rowid).draw(position + Point<int16_t>(9, getchattop(chatopen) - yshift - 21));
+				rowtexts.at(rowid).draw(position + Point<int16_t>(9, getchattop(chatopen) - yshift - 21) + pos_adj);
 			}
 		}
 		else
 		{
-			chatspace[0].draw(position + Point<int16_t>(0, -1));
-			chatspace[1].draw(position + Point<int16_t>(0, -1));
-			chatspace[2].draw(position);
-			chatspace[3].draw(position + Point<int16_t>(0, -16));
+			auto pos_adj = chatfieldopen ? Point<int16_t>(0, -28) : Point<int16_t>(0, 0);
+
+			chatspace[0].draw(position + Point<int16_t>(0, -1) + pos_adj);
+			chatspace[1].draw(position + Point<int16_t>(0, -1) + pos_adj);
+			chatspace[2].draw(position + pos_adj);
+			chatspace[3].draw(position + Point<int16_t>(0, -16) + pos_adj);
 
 			if (rowtexts.count(rowmax))
-				rowtexts.at(rowmax).draw(position + Point<int16_t>(9, -6));
+				rowtexts.at(rowmax).draw(position + Point<int16_t>(9, -6) + pos_adj);
 		}
 
 		if (chatfieldopen)
@@ -206,22 +222,28 @@ namespace jrc
 			chatfield.draw(position + Point<int16_t>(-4, -4));
 		}
 
-			UIElement::draw_buttons(inter);
+		UIElement::draw_buttons(inter);
 
 		if (chatopen)
-			for (size_t i = 0; i < NUM_CHATTAB; i++)
-				chattab_text[CHT_ALL + i].draw(position + Point<int16_t>(chattab_x + (i * chattab_span) + 25, chattab_y - 3));
+		{
+			auto pos_adj = chatopen && !chatfieldopen ? Point<int16_t>(0, 28) : Point<int16_t>(0, 0);
+
+			for (size_t i = 0; i < ChatTab::NUM_CHATTAB; i++)
+				chattab_text[ChatTab::CHT_ALL + i].draw(position + Point<int16_t>(chattab_x + (i * chattab_span) + 25, chattab_y - 3) + pos_adj);
 		}
+	}
 
 	void UIChatbar::update()
 	{
 		UIElement::update();
 
-		for (size_t i = 0; i < NUM_CHATTAB; i++)
-			buttons[BT_TAB_0 + i]->set_position(Point<int16_t>(chattab_x + (i * chattab_span), chattab_y));
+		auto pos_adj = chatopen && !chatfieldopen ? Point<int16_t>(0, 28) : Point<int16_t>(0, 0);
 
-		buttons[BT_TAB_0 + NUM_CHATTAB]->set_position(Point<int16_t>(chattab_x + (NUM_CHATTAB * chattab_span), chattab_y));
-		buttons[BT_CLOSECHAT]->set_position(closechat + Point<int16_t>(0, chattab_y));
+		for (size_t i = 0; i < ChatTab::NUM_CHATTAB; i++)
+			buttons[BT_TAB_0 + i]->set_position(Point<int16_t>(chattab_x + (i * chattab_span), chattab_y) + pos_adj);
+
+		buttons[Buttons::BT_TAB_0 + ChatTab::NUM_CHATTAB]->set_position(Point<int16_t>(chattab_x + (ChatTab::NUM_CHATTAB * chattab_span), chattab_y) + pos_adj);
+		buttons[Buttons::BT_CLOSECHAT]->set_position(closechat + Point<int16_t>(0, chattab_y) + pos_adj);
 
 		chatfield.update(position);
 
@@ -229,13 +251,13 @@ namespace jrc
 			iter.second -= Constants::TIMESTEP;
 	}
 
-	void UIChatbar::send_key(int32_t keycode, bool pressed)
+	void UIChatbar::send_key(int32_t keycode, bool pressed, bool escape)
 	{
 		if (pressed)
 		{
-			if (keycode == KeyAction::RETURN)
+			if (keycode == KeyAction::Id::RETURN)
 				toggle_chatfield();
-			else if (keycode == KeyAction::ESCAPE)
+			else if (escape)
 				toggle_chatfield(false);
 		}
 	}
@@ -259,6 +281,11 @@ namespace jrc
 		{
 			return UIDragElement::send_cursor(clicking, cursorpos);
 		}
+	}
+
+	UIElement::Type UIChatbar::get_type() const
+	{
+		return TYPE;
 	}
 
 	Cursor::State UIChatbar::check_dragtop(bool clicking, Point<int16_t> cursorpos)
@@ -309,7 +336,7 @@ namespace jrc
 				chattab_y = getchattop(chatopen) - 33;
 				//dimension.set_y(getchatbarheight());
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
@@ -322,11 +349,11 @@ namespace jrc
 			{
 				dragchattop = true;
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
-				return Cursor::CHATBARVDRAG;
+				return Cursor::State::CHATBARVDRAG;
 			}
 		}
 		else if (in_chattopleft)
@@ -335,11 +362,11 @@ namespace jrc
 			{
 				//dragchattopleft = true;
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
-				return Cursor::CHATBARBRTLDRAG;
+				return Cursor::State::CHATBARBRTLDRAG;
 			}
 		}
 		else if (in_chattopright)
@@ -348,11 +375,11 @@ namespace jrc
 			{
 				//dragchattopright = true;
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
-				return Cursor::CHATBARBLTRDRAG;
+				return Cursor::State::CHATBARBLTRDRAG;
 			}
 		}
 		else if (in_chatleft)
@@ -361,11 +388,11 @@ namespace jrc
 			{
 				//dragchatleft = true;
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
-				return Cursor::CHATBARHDRAG;
+				return Cursor::State::CHATBARHDRAG;
 			}
 		}
 		else if (in_chatright)
@@ -374,19 +401,21 @@ namespace jrc
 			{
 				//dragchatright = true;
 
-				return Cursor::CLICKING;
+				return Cursor::State::CLICKING;
 			}
 			else
 			{
-				return Cursor::CHATBARHDRAG;
+				return Cursor::State::CHATBARHDRAG;
 			}
 		}
+
 		return UIDragElement::send_cursor(clicking, cursorpos);
 	}
 
 	bool UIChatbar::indragrange(Point<int16_t> cursorpos) const
 	{
 		auto bounds = getbounds(dragarea);
+
 		return bounds.contains(cursorpos);
 	}
 
@@ -397,21 +426,21 @@ namespace jrc
 
 		//slider.setrows(rowpos, chatrows, rowmax);
 
-		Text::Color color;
+		Color::Name color;
 
 		switch (type)
 		{
-		case RED:
-			color = Text::Color::DARKRED;
+		case LineType::RED:
+			color = Color::Name::DARKRED;
 			break;
-		case BLUE:
-			color = Text::Color::MEDIUMBLUE;
+		case LineType::BLUE:
+			color = Color::Name::MEDIUMBLUE;
 			break;
-		case YELLOW:
-			color = Text::Color::YELLOW;
+		case LineType::YELLOW:
+			color = Color::Name::YELLOW;
 			break;
 		default:
-			color = Text::Color::WHITE;
+			color = Color::Name::WHITE;
 			break;
 		}
 
@@ -427,7 +456,7 @@ namespace jrc
 		if (message_cooldowns[line] > 0)
 			return;
 
-		std::string message{ Messages::messages[line] };
+		std::string message = Messages::messages[line];
 		send_chatline(message, type);
 
 		message_cooldowns[line] = MESSAGE_COOLDOWN;
@@ -445,13 +474,17 @@ namespace jrc
 			return;
 
 		chatopen = chat_open;
-		buttons[BT_OPENCHAT]->set_active(!chat_open);
-		buttons[BT_CLOSECHAT]->set_active(chat_open);
 
-		for (size_t i = 0; i < NUM_CHATTAB; i++)
-			buttons[BT_TAB_0 + i]->set_active(chat_open);
+		if (!chatopen && chatfieldopen)
+			toggle_chatfield();
 
-		buttons[BT_TAB_0 + NUM_CHATTAB]->set_active(chat_open);
+		buttons[Buttons::BT_OPENCHAT]->set_active(!chat_open);
+		buttons[Buttons::BT_CLOSECHAT]->set_active(chat_open);
+
+		for (size_t i = 0; i < ChatTab::NUM_CHATTAB; i++)
+			buttons[Buttons::BT_TAB_0 + i]->set_active(chat_open);
+
+		buttons[Buttons::BT_TAB_0 + ChatTab::NUM_CHATTAB]->set_active(chat_open);
 	}
 
 	void UIChatbar::toggle_chatfield()
@@ -468,10 +501,10 @@ namespace jrc
 
 		if (chatfieldopen)
 		{
-			buttons[BT_CHAT]->set_active(true);
-			buttons[BT_HELP]->set_active(true);
-			buttons[BT_LINK]->set_active(true);
-			buttons[BT_CHAT_TARGET]->set_active(true);
+			buttons[Buttons::BT_CHAT]->set_active(true);
+			buttons[Buttons::BT_HELP]->set_active(true);
+			buttons[Buttons::BT_LINK]->set_active(true);
+			buttons[Buttons::BT_CHAT_TARGET]->set_active(true);
 
 			chatfield.set_state(Textfield::State::FOCUSED);
 
@@ -479,10 +512,10 @@ namespace jrc
 		}
 		else
 		{
-			buttons[BT_CHAT]->set_active(false);
-			buttons[BT_HELP]->set_active(false);
-			buttons[BT_LINK]->set_active(false);
-			buttons[BT_CHAT_TARGET]->set_active(false);
+			buttons[Buttons::BT_CHAT]->set_active(false);
+			buttons[Buttons::BT_HELP]->set_active(false);
+			buttons[Buttons::BT_LINK]->set_active(false);
+			buttons[Buttons::BT_CHAT_TARGET]->set_active(false);
 
 			chatfield.set_state(Textfield::State::DISABLED);
 			chatfield.change_text("");
@@ -491,27 +524,37 @@ namespace jrc
 		}
 	}
 
+	bool UIChatbar::is_chatopen()
+	{
+		return chatopen;
+	}
+
+	bool UIChatbar::is_chatfieldopen()
+	{
+		return chatfieldopen;
+	}
+
 	Button::State UIChatbar::button_pressed(uint16_t buttonid)
 	{
 		switch (buttonid)
 		{
-		case BT_OPENCHAT:
-		case BT_CLOSECHAT:
+		case Buttons::BT_OPENCHAT:
+		case Buttons::BT_CLOSECHAT:
 			toggle_chat();
 			break;
-		case BT_TAB_0:
-		case BT_TAB_1:
-		case BT_TAB_2:
-		case BT_TAB_3:
-		case BT_TAB_4:
-		case BT_TAB_5:
-			for (size_t i = 0; i < NUM_CHATTAB; i++)
+		case Buttons::BT_TAB_0:
+		case Buttons::BT_TAB_1:
+		case Buttons::BT_TAB_2:
+		case Buttons::BT_TAB_3:
+		case Buttons::BT_TAB_4:
+		case Buttons::BT_TAB_5:
+			for (size_t i = 0; i < ChatTab::NUM_CHATTAB; i++)
 			{
-				buttons[BT_TAB_0 + i]->set_state(Button::State::NORMAL);
-				chattab_text[CHT_ALL + i].change_color(Text::Color::DUSTYGRAY);
+				buttons[Buttons::BT_TAB_0 + i]->set_state(Button::State::NORMAL);
+				chattab_text[ChatTab::CHT_ALL + i].change_color(Color::Name::DUSTYGRAY);
 			}
 
-			chattab_text[buttonid - BT_TAB_0].change_color(Text::Color::WHITE);
+			chattab_text[buttonid - Buttons::BT_TAB_0].change_color(Color::Name::WHITE);
 
 			return Button::State::PRESSED;
 		}

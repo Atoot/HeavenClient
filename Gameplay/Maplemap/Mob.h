@@ -1,44 +1,41 @@
-/////////////////////////////////////////////////////////////////////////////
-// This file is part of the Journey MMORPG client                           //
-// Copyright © 2015-2016 Daniel Allendorf                                   //
-//                                                                          //
-// This program is free software: you can redistribute it and/or modify     //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
-//                                                                          //
-// This program is distributed in the hope that it will be useful,          //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
-// GNU Affero General Public License for more details.                      //
-//                                                                          //
-// You should have received a copy of the GNU Affero General Public License //
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//	This file is part of the continued Journey MMORPG client					//
+//	Copyright (C) 2015-2019  Daniel Allendorf, Ryan Payton						//
+//																				//
+//	This program is free software: you can redistribute it and/or modify		//
+//	it under the terms of the GNU Affero General Public License as published by	//
+//	the Free Software Foundation, either version 3 of the License, or			//
+//	(at your option) any later version.											//
+//																				//
+//	This program is distributed in the hope that it will be useful,				//
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of				//
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				//
+//	GNU Affero General Public License for more details.							//
+//																				//
+//	You should have received a copy of the GNU Affero General Public License	//
+//	along with this program.  If not, see <https://www.gnu.org/licenses/>.		//
+//////////////////////////////////////////////////////////////////////////////////
 #pragma once
+
 #include "Mapobject.h"
+
+#include "../Movement.h"
 
 #include "../Combat/Attack.h"
 #include "../Combat/Bullet.h"
-#include "../Combat/DamageNumber.h"
-#include "../Movement.h"
+#include "../Audio/Audio.h"
+#include "../Graphics/EffectLayer.h"
+#include "../Graphics/Geometry.h"
+#include "../Util/Randomizer.h"
+#include "../Util/TimedBool.h"
 
-#include "../../Audio/Audio.h"
-#include "../../Constants.h"
-#include "../../Graphics/Text.h"
-#include "../../Graphics/EffectLayer.h"
-#include "../../Graphics/Geometry.h"
-#include "../../Template/Rectangle.h"
-#include "../../Template/Interpolated.h"
-#include "../../Util/Randomizer.h"
-#include "../../Util/TimedBool.h"
-
-namespace jrc
+namespace ms
 {
 	class Mob : public MapObject
 	{
 	public:
 		static const size_t NUM_STANCES = 6;
+
 		enum Stance : uint8_t
 		{
 			MOVE = 2,
@@ -54,7 +51,9 @@ namespace jrc
 			{
 				"move", "stand", "jump", "hit1", "die1", "fly"
 			};
+
 			size_t index = (stance - 1) / 2;
+
 			return stancenames[index];
 		}
 
@@ -63,10 +62,8 @@ namespace jrc
 			return flip ? stance : stance + 1;
 		}
 
-		// Construct a mob by combining data from game files with
-		// data sent by the server.
-		Mob(int32_t oid, int32_t mobid, int8_t mode, int8_t stance, uint16_t fhid, 
-			bool newspawn, int8_t team, Point<int16_t> position);
+		// Construct a mob by combining data from game files with data sent by the server.
+		Mob(int32_t oid, int32_t mobid, int8_t mode, int8_t stance, uint16_t fhid, bool newspawn, int8_t team, Point<int16_t> position);
 
 		// Draw the mob.
 		void draw(double viewx, double viewy, float alpha) const override;
@@ -87,7 +84,7 @@ namespace jrc
 		// Show an effect at the mob's position.
 		void show_effect(const Animation& animation, int8_t pos, int8_t z, bool flip);
 
-		// Calculate the damage to this mob with the spcecified attack.
+		// Calculate the damage to this mob with the specified attack.
 		std::vector<std::pair<int32_t, bool>> calculate_damage(const Attack& attack);
 		// Apply damage to the mob.
 		void apply_damage(int32_t damage, bool toleft);
@@ -129,8 +126,7 @@ namespace jrc
 		// Calculate the maximum damage.
 		double calculate_maxdamage(int16_t leveldelta, double maxdamage, bool magic) const;
 		// Calculate a random damage line based on the specified values.
-		std::pair<int32_t, bool> next_damage(double mindamage,
-			double maxdamage, float hitchance, float critical) const;
+		std::pair<int32_t, bool> next_damage(double mindamage, double maxdamage, float hitchance, float critical) const;
 
 		// Return the current 'head' position.
 		Point<int16_t> get_head_position(Point<int16_t> position) const;
@@ -172,7 +168,6 @@ namespace jrc
 		int8_t team;
 		bool dying;
 		bool dead;
-		bool awaitdeath;
 		bool control;
 		bool aggro;
 		Stance stance;
@@ -185,4 +180,3 @@ namespace jrc
 		Linear<float> opacity;
 	};
 }
-
